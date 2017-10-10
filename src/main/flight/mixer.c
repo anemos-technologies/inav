@@ -46,7 +46,10 @@
 #include "flight/pid.h"
 #include "flight/servos.h"
 
+#include "sensors/gyro.h"
+
 #include "rx/rx.h"
+#include "math.h"
 
 
 //#define MIXER_DEBUG
@@ -466,6 +469,7 @@ void mixTable(void)
         input[YAW] = rcCommand[YAW];
     }
     else {
+
         input[ROLL] = axisPID[ROLL];
         input[PITCH] = axisPID[PITCH];
         input[YAW] = axisPID[YAW];
@@ -476,10 +480,21 @@ void mixTable(void)
         }
     }
 
+    //input[ROLL]=-500;
+    //input[PITCH]=0;
+
     // Initial mixer concept by bdoiron74 reused and optimized for Air Mode
     int16_t rpyMix[MAX_SUPPORTED_MOTORS];
-    int16_t rpyMixMax = 0; // assumption: symetrical about zero.
+    int16_t rpyMixMax = 0; // assumption: symmetrical about zero.
     int16_t rpyMixMin = 0;
+
+    //semi paththrough method for Andurance transfered to embedded controler on the rotor
+    /*rpyMix[0]=input[THROTTLE];
+    rpyMix[1]=input[ROLL];
+    rpyMix[2]=input[PITCH];
+
+    //specific yaw stabilisation with a gimbal motor
+    rpyMix[3]=gyro.gyroADCf[Z];*/
 
     // motors for non-servo mixes
     for (int i = 0; i < motorCount; i++) {
@@ -542,10 +557,44 @@ void mixTable(void)
         throttleMax = MAX(throttleMax - (rpyMixRange / 2), throttleMin + (throttleRange / 2) + (throttleRange * THROTTLE_CLIPPING_FACTOR / 2));
     }
 
+    int16_t throttleCommandConstrained=constrain(throttleCommand, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+    float actual_yaw=(float)attitude.values.yaw*M_PIf/1800.0;
+    double input_valuef=rcCommand[PITCH]*cosf(-actual_yaw+M_PIf/2)-rcCommand[ROLL]*cosf(-actual_yaw);
+
+
+    //throttleCommandConstrained=1500;
+
+    if (ARMING_FLAG(ARMED)) {
+
+    	motor[2] = throttleCommandConstrained;
+    	motor[3] = 1000+(int)input_valuef;
+
+    	if(throttleCommandConstrained < (motorConfig()->minthrottle+motorConfig()->maxthrottle)/2)
+    	{
+    		input_valuef=input_valuef*(throttleCommandConstrained-motorConfig()->minthrottle)/(throttleRange / 2);
+    	}
+
+    	motor[4] = 1000+(int)input_valuef;
+    	motor[5]=1000+rcCommand[PITCH];
+    	motor[6]=1000+rcCommand[ROLL];
+    	motor[7]=1000+500*(throttleCommandConstrained-motorConfig()->minthrottle)/(throttleRange / 2);
+    	motor[0] = constrain(input_valuef+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+    	motor[1] = constrain(-input_valuef+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+    }
+    else
+    {
+    	motor[0] = motorConfig()->minthrottle;
+    	motor[1] = motorConfig()->minthrottle;
+    }
+
     // Now add in the desired throttle, but keep in a range that doesn't clip adjusted
     // roll/pitch/yaw. This could move throttle down, but also up for those low throttle flips.
-    if (ARMING_FLAG(ARMED)) {
-        for (int i = 0; i < motorCount; i++) {
+   /*if (ARMING_FLAG(ARMED)) {
+    	motor[0] = constrain((int16_t)((float)(input[PITCH])*cos_actual_yaw)-input[ROLL]*sin_actual_yaw+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+    	motor[1] = constrain(-input[PITCH]*sinf(actual_yaw)+input[ROLL]*cosf(actual_yaw)+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+
+    	for (int i = 0; i < motorCount; i++) {
+
             motor[i] = rpyMix[i] + constrain(throttleCommand * currentMixer[i].throttle, throttleMin, throttleMax);
 
             if (failsafeIsActive()) {
@@ -575,9 +624,11 @@ void mixTable(void)
                 }
             }
         }
-    } else {
+    }
+else {
         for (int i = 0; i < motorCount; i++) {
             motor[i] = motor_disarmed[i];
         }
     }
+    */
 }

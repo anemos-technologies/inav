@@ -115,6 +115,8 @@ extern uint8_t __config_end;
 #define PLAY_SOUND
 #endif
 
+int gyro_count=0;
+
 extern timeDelta_t cycleTime; // FIXME dependency on mw.c
 extern uint8_t detectedSensors[SENSOR_INDEX_COUNT];
 
@@ -3570,6 +3572,16 @@ void cliProcess(void)
     if (!cliWriter) {
         return;
     }
+
+
+    /*if(gyro_count==10)
+    {
+    	printf("gyro : %d|%d|%d ==> %d\n", (int)gyro.gyroADCf[X], (int)gyro.gyroADCf[Y], (int)gyro.gyroADCf[Z],attitude.values.yaw);
+    	gyro_count=0;
+    }else
+    {
+    	gyro_count++;
+    }*/
 
     // Be a little bit tricky.  Flush the last inputs buffer, if any.
     bufWriterFlush(cliWriter);
