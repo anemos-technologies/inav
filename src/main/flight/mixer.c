@@ -558,9 +558,9 @@ void mixTable(void)
     }
 
     int16_t throttleCommandConstrained=constrain(throttleCommand, motorConfig()->minthrottle, motorConfig()->maxthrottle);
-    float actual_yaw=(float)attitude.values.yaw*M_PIf/1800.0;
-    double input_valuef=rcCommand[PITCH]*cosf(-actual_yaw+M_PIf/2)-rcCommand[ROLL]*cosf(-actual_yaw);
-
+   // float actual_yaw=(float)attitude.values.yaw*M_PIf/1800.0;
+   // double input_valuef=rcCommand[PITCH]*cosf(-actual_yaw+M_PIf/2)-rcCommand[ROLL]*cosf(-actual_yaw);
+    double input_valuef;
 
     //throttleCommandConstrained=1500;
 
@@ -571,7 +571,11 @@ void mixTable(void)
 
     	if(throttleCommandConstrained < (motorConfig()->minthrottle+motorConfig()->maxthrottle)/2)
     	{
-    		input_valuef=input_valuef*(throttleCommandConstrained-motorConfig()->minthrottle)/(throttleRange / 2);
+    		input_valuef=axisPID[ROLL]*(throttleCommandConstrained-motorConfig()->minthrottle)/(throttleRange / 2);
+    	}
+    	else
+    	{
+    		input_valuef=axisPID[ROLL];
     	}
 
     	motor[4] = 1000+(int)input_valuef;

@@ -381,6 +381,14 @@ static float calcHorizonRateMagnitude(void)
 
 static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float horizonRateMagnitude)
 {
+
+	if(axis==FD_ROLL)
+	{
+		float actual_yaw=(float)attitude.values.yaw*M_PIf/1800.0;
+		rcCommand[axis] = constrain(rcCommand[PITCH]*sinf(actual_yaw)+rcCommand[ROLL]*cosf(actual_yaw), -500, 500);
+		//rcCommand[axis] = 0;
+	}
+
     // This is ROLL/PITCH, run ANGLE/HORIZON controllers
     const float angleTarget = pidRcCommandToAngle(rcCommand[axis], pidProfile()->max_angle_inclination[axis]);
     const float angleErrorDeg = DECIDEGREES_TO_DEGREES(angleTarget - attitude.raw[axis]);
