@@ -558,33 +558,43 @@ void mixTable(void)
     }
 
     int16_t throttleCommandConstrained=constrain(throttleCommand, motorConfig()->minthrottle, motorConfig()->maxthrottle);
-   // float actual_yaw=(float)attitude.values.yaw*M_PIf/1800.0;
+    double actual_yaw=(float)attitude.values.yaw*M_PIf/1800.0;
    // double input_valuef=rcCommand[PITCH]*cosf(-actual_yaw+M_PIf/2)-rcCommand[ROLL]*cosf(-actual_yaw);
-    double input_valuef;
+    float input_valuef1;
+    float input_valuef2;
 
     //throttleCommandConstrained=1500;
 
     if (ARMING_FLAG(ARMED)) {
 
-    	motor[2] = throttleCommandConstrained;
-    	motor[3] = 1000+(int)input_valuef;
+    	motor[4] = throttleCommandConstrained;
+
+    	double desired_angle_roll=(rcCommand[PITCH]*sinf(actual_yaw)+rcCommand[ROLL]*cosf(actual_yaw))*700/500;
+    	double desired_angle_pitch=(-rcCommand[PITCH]*cosf(actual_yaw)+rcCommand[ROLL]*sinf(actual_yaw))*700/500;
+
+    	input_valuef1 = getP_raw_value()*(float)(attitude.values.roll-desired_angle_roll);
+    	input_valuef2 = getP_raw_value()*(float)(attitude.values.pitch-desired_angle_pitch);
+
+        float TPA;
 
     	if(throttleCommandConstrained < (motorConfig()->minthrottle+motorConfig()->maxthrottle)/2)
     	{
-    		input_valuef=axisPID[ROLL]*(throttleCommandConstrained-motorConfig()->minthrottle)/(throttleRange / 2);
-    	}
-    	else
-    	{
-    		input_valuef=axisPID[ROLL];
+    		TPA=(float)(throttleCommandConstrained-motorConfig()->minthrottle)/(float)(throttleRange / 2);
+    		input_valuef1*=TPA;
+    		input_valuef2*=TPA;
     	}
 
-    	motor[4] = 1000+(int)input_valuef;
-    	motor[5]=1000+rcCommand[PITCH];
-    	motor[6]=1000+rcCommand[ROLL];
-    	motor[7]=1000+500*(throttleCommandConstrained-motorConfig()->minthrottle)/(throttleRange / 2);
-    	motor[0] = constrain(input_valuef+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
-    	motor[1] = constrain(-input_valuef+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
-    }
+
+    	motor[6] = 1000+(int)input_valuef1;
+    	motor[5] = 1000+(input_valuef2);
+    	motor[7]=1000+TPA*100;
+
+    	motor[2] = constrain(input_valuef2+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+    	motor[3] = constrain(-input_valuef2+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+
+    	motor[0] = constrain(input_valuef1+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+    	motor[1] = constrain(-input_valuef1+throttleCommandConstrained, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+   }
     else
     {
     	motor[0] = motorConfig()->minthrottle;

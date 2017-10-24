@@ -473,6 +473,11 @@ static void pidApplyFixedWingRateController(pidState_t *pidState, flight_dynamic
 }
 #endif
 
+float getP_raw_value()
+{
+	return pidState[PID_ROLL].kP;
+}
+
 static void pidApplyMulticopterRateController(pidState_t *pidState, flight_dynamics_index_t axis)
 {
     const float rateError = pidState->rateTarget - pidState->gyroRate;
